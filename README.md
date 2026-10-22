@@ -4,6 +4,8 @@ VR support for Grand Theft Auto V using OpenVR, some reverse engineering of the 
 
 This is a continuation of [veryjos/GTAV_OpenVR](https://github.com/veryjos/GTAV_OpenVR), the original GTA: Vive by Joseph Delgado. This release is for **GTA V Enhanced** (D3D12). The original D3D11 path for GTA V Legacy is still in the code; a Legacy release will follow separately.
 
+**Best with VRCam Enhanced** (camera rat, flashlight, zoom, viewfinder): https://github.com/rashwashere/VRcamPlus/tree/enhanced (downloads: https://github.com/rashwashere/VRcamPlus/releases). GTAVive.asi gives you VR; VRCam adds the camera tools on top. Its default keys do not overlap this mod's.
+
 ## What's new since the original
 
 - **GTA V Enhanced support**: a D3D12 capture path next to the original D3D11 one.
@@ -60,6 +62,8 @@ These are the defaults. Every key can be changed in the settings menu (Keys page
 
 A key bind is optional modifiers and one key joined with `+`, for example `Ctrl+Shift+F8`, `Alt+Home` or `K`. Matching is exact: a bind without modifiers does not fire while Ctrl, Shift or Alt is held. The full list of key names is in `gtavive.ini`.
 
+Set a key to None (or leave it empty) to unbind it; the menu key always stays bound. A menu navigation key set to None still navigates with its default key.
+
 The game's character switch (F5-F8 and the Alt wheel) is disabled while the mod runs.
 
 **Settings menu**
@@ -70,7 +74,7 @@ Press **Ctrl+F6** (`OpenMenu`) to open it, with VR on or off; it is drawn on the
 |---|---|
 | Gameplay | Every `[Beta]` option in `gtavive.ini` |
 | Stabilizer | Stabilizer on/off, preset, position / rotation switches, the active preset's values; room scale on/off, mode and walk gain; pose timing |
-| Keys | Every bind above. Select a row, press Enter, then press the new key combination (Esc cancels). Binds used twice are shown in orange. "Reset keys to defaults" restores them all |
+| Keys | Every bind above. Select a row, press Enter, then press the new key combination; Delete sets the bind to None, Esc cancels. The menu key and the menu navigation keys can not be None. Binds used twice are shown in orange. "Reset keys to defaults" restores them all |
 | Actions | VR off / on, re-centre view |
 
 Every change applies at once and is saved to `gtavive.ini` or `stabilizer.ini` straight away.
@@ -106,5 +110,4 @@ The output goes to `x64\Release\`: `OVRInject.dll` and `GTAVive.asi`.
 
 - Joseph Delgado ([veryjos](https://github.com/veryjos)): original GTA: Vive and OVRInject.
 - Alexander Blade: Script Hook V.
-- theBmag: [VRcam](https://github.com/theBmag/VRcam), the GTA V camera mod whose ideas helped shape this project.
 - Valve: OpenVR. Tsuda Kageyu: MinHook. Cameron Desrochers: readerwriterqueue.

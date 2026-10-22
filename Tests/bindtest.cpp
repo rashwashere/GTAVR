@@ -69,6 +69,19 @@ int main() {
   Check("Shift+Numpad5", VK_NUMPAD5, false, true, false);
   Check("Ctrl+0x77", 0x77, true, false, false);
   Check("garbage!!", 0x999, false, false, false);
+  // None / empty = unbound (vk 0), written back as "None"
+  Check("None", 0, false, false, false);
+  Check(" nOnE ", 0, false, false, false);
+  Check("", 0, false, false, false);
+  Check("Nonexistent", 0x999, false, false, false);
+  {
+    HotkeyBind none = { 0, false, false, false };
+    char text[16];
+    HotkeyFormat(none, text, sizeof(text));
+    bool ok = strcmp(text, "None") == 0;
+    printf("%-22s -> \"%s\"  %s\n", "format unbound", text, ok ? "OK" : "FAIL");
+    if (!ok) ++failures;
+  }
 
   printf("\n=== Euler round trips ===\n");
   EulerRoundTrip(0, 0, 0);

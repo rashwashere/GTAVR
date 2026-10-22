@@ -43,6 +43,16 @@ bool IsStabilizerBind(BindId id)
 	return id >= BIND_GTAVIVE_COUNT;
 }
 
+static bool IsMenuNavBind(BindId id)
+{
+	return id >= BIND_MENU_UP && id <= BIND_MENU_BACK;
+}
+
+bool BindCanBeNone(BindId id)
+{
+	return id != BIND_OPEN_MENU && !IsMenuNavBind(id);
+}
+
 static const char* BindFile(BindId id)
 {
 	return IsStabilizerBind(id) ? StabilizerIniPath() : GtaviveIniPath();
@@ -76,15 +86,29 @@ void LoadKeyBinds(bool force)
 		BindId id = (BindId)i;
 		char text[64] = "";
 		GetPrivateProfileStringA(BindSection(id), kBinds[i].iniKey, kBinds[i].defaultText, text, sizeof(text), BindFile(id));
+		// "None" and an empty value parse to the unbound bind and stay None
 		HotkeyBind b = DefaultBind(id);
-		if (!OVRInject::HotkeyParse(text, b))
+		bool readable = OVRInject::HotkeyParse(text, b);
+		if (!readable)
 		{
 			b = DefaultBind(id);
 			static ULONGLONG lastWarn[BIND_COUNT];
-			if (now - lastWarn[i] > 30000)
+			if (id != BIND_OPEN_MENU && now - lastWarn[i] > 30000)
 			{
 				lastWarn[i] = now;
 				Trace("KEYS: could not read %s=%s, using %s\n", kBinds[i].iniKey, text, kBinds[i].defaultText);
+			}
+		}
+		// The menu key is never None or unreadable: the menu must stay reachable
+		if (id == BIND_OPEN_MENU && (!readable || OVRInject::HotkeyIsNone(b)))
+		{
+			b = DefaultBind(id);
+			static bool warned = false;
+			if (!warned)
+			{
+				warned = true;
+				Trace("KEYS: %s can not be None or unreadable (%s=%s), using %s\n", kBinds[i].iniKey,
+					kBinds[i].iniKey, text, kBinds[i].defaultText);
 			}
 		}
 		if (g_loaded && !OVRInject::HotkeyEqual(b, g_binds[i]))
@@ -110,12 +134,31 @@ void GetBindText(BindId id, char* out, size_t outSize)
 	OVRInject::HotkeyFormat(GetBind(id), out, outSize);
 }
 
-void SetBind(BindId id, const HotkeyBind& bind)
+HotkeyBind GetEffectiveBind(BindId id)
 {
+	const HotkeyBind& b = GetBind(id);
+	if (IsMenuNavBind(id) && OVRInject::HotkeyIsNone(b))
+		return DefaultBind(id);
+	return b;
+}
+
+void GetEffectiveBindText(BindId id, char* out, size_t outSize)
+{
+	OVRInject::HotkeyFormat(GetEffectiveBind(id), out, outSize);
+}
+
+bool SetBind(BindId id, const HotkeyBind& bind)
+{
+	if (OVRInject::HotkeyIsNone(bind) && !BindCanBeNone(id))
+		return false;
+	HotkeyBind stored = bind;
+	if (OVRInject::HotkeyIsNone(stored))
+		stored.ctrl = stored.shift = stored.alt = false;
 	char text[64];
-	OVRInject::HotkeyFormat(bind, text, sizeof(text));
+	OVRInject::HotkeyFormat(stored, text, sizeof(text));
 	WriteIniString(BindSection(id), kBinds[id].iniKey, text, BindFile(id));
-	g_binds[id] = bind;
+	g_binds[id] = stored;
+	return true;
 }
 
 void ResetAllBindsToDefaults()
@@ -131,10 +174,13 @@ void ResetAllBindsToDefaults()
 
 BindId FindDuplicateBind(BindId id)
 {
-	const HotkeyBind& b = GetBind(id);
+	// Compares the keys that act; an unbound (None) function duplicates nothing
+	HotkeyBind b = GetEffectiveBind(id);
+	if (OVRInject::HotkeyIsNone(b))
+		return BIND_COUNT;
 	for (int i = 0; i < BIND_COUNT; ++i)
 	{
-		if (i != id && OVRInject::HotkeyEqual(b, g_binds[i]))
+		if (i != id && OVRInject::HotkeyEqual(b, GetEffectiveBind((BindId)i)))
 			return (BindId)i;
 	}
 	return BIND_COUNT;
@@ -147,7 +193,7 @@ void SetBindsSuppressed(bool suppressed)
 
 bool BindPressedIgnoringSuppression(BindId id)
 {
-	const HotkeyBind& b = GetBind(id);
+	HotkeyBind b = GetEffectiveBind(id);
 	return b.vk > 0 && KeyReleasedThisTick((DWORD)b.vk) && OVRInject::HotkeyModifiersMatch(b);
 }
 
@@ -158,6 +204,6 @@ bool BindPressed(BindId id)
 
 bool BindHeld(BindId id)
 {
-	const HotkeyBind& b = GetBind(id);
+	HotkeyBind b = GetEffectiveBind(id);
 	return b.vk > 0 && (GetAsyncKeyState(b.vk) & 0x8000) != 0 && OVRInject::HotkeyModifiersMatch(b);
 }

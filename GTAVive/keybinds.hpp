@@ -5,6 +5,10 @@
 // GTAVive's own binds live in gtaovr\gtavive.ini [Keys]; the stabilizer and room scale binds live in
 // gtaovr\stabilizer.ini [Hotkeys] and are handled by OVRInject (GTAVive only shows and edits them).
 // Both files are re-read at most once a second, and at once after a change made in the settings menu.
+//
+// A bind set to None (or left empty) has no key and never fires; None is kept as None on load, save and reload.
+// Exceptions that keep the menu reachable: OpenMenu is never None (None, empty or unreadable means its default),
+// and a menu navigation bind set to None navigates with its default key (Esc always goes back).
 
 #include "Vive/Hotkey.hpp"
 
@@ -49,17 +53,26 @@ struct BindInfo
 const BindInfo& GetBindInfo(BindId id);
 bool IsStabilizerBind(BindId id);
 
+// False for OpenMenu and the menu navigation binds, which can not be set to None.
+bool BindCanBeNone(BindId id);
+
 // Re-reads both files when a second has passed or the menu changed a value; force = always.
 void LoadKeyBinds(bool force = false);
 
+// The bind as set (vk 0 = None) and its text ("None" when unbound).
 const OVRInject::HotkeyBind& GetBind(BindId id);
 void GetBindText(BindId id, char* out, size_t outSize);
 
-// Writes a new bind to its file and applies it at once.
-void SetBind(BindId id, const OVRInject::HotkeyBind& bind);
+// The key that actually acts: the bind, or for a menu navigation bind set to None its default.
+OVRInject::HotkeyBind GetEffectiveBind(BindId id);
+void GetEffectiveBindText(BindId id, char* out, size_t outSize);
+
+// Writes a new bind to its file and applies it at once. Returns false (nothing written) for None on a bind
+// that can not be None.
+bool SetBind(BindId id, const OVRInject::HotkeyBind& bind);
 void ResetAllBindsToDefaults();
 
-// The first other bind with the same key and modifiers, or BIND_COUNT when the bind is unique.
+// The first other bind with the same key and modifiers, or BIND_COUNT when the bind is unique or None.
 BindId FindDuplicateBind(BindId id);
 
 // While suppressed (settings menu open) BindPressed always returns false.

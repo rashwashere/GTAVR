@@ -7,6 +7,7 @@
 // Modifiers: Ctrl (or Control), Shift, Alt. Keys: A-Z, 0-9, F1-F24, Numpad0-Numpad9 and the names in kHotkeyNames,
 // or a raw virtual-key code (decimal, or hex like 0x77). Matching is exact: a bind without modifiers does not fire
 // while Ctrl, Shift or Alt is held.
+// "None" (any case) or an empty value means the function has no key: the bind parses to vk 0 and never fires.
 
 #include <Windows.h>
 #include <cctype>
@@ -93,8 +94,35 @@ namespace OVRInject
     return (vk > 0 && vk < 256) ? vk : 0;
   }
 
-  // Parses a bind string. Returns false (and leaves out untouched) when the string names no usable key.
+  // True for an unbound bind (vk 0), written as "None".
+  inline bool HotkeyIsNone(const HotkeyBind& bind) {
+    return bind.vk <= 0;
+  }
+
+  // True when the text is empty, only spaces, or "None" (any case, spaces ignored).
+  inline bool HotkeyIsNoneText(const char* str) {
+    char token[8];
+    int len = 0;
+    for (const char* p = str; *p != '\0'; ++p) {
+      if (*p == ' ' || *p == '\t')
+        continue;
+      if (len >= (int)sizeof(token) - 1)
+        return false;
+      token[len++] = *p;
+    }
+    token[len] = '\0';
+    return len == 0 || _stricmp(token, "none") == 0;
+  }
+
+  // Parses a bind string. "None" or an empty string gives the unbound bind (vk 0) and returns true. Returns false
+  // (and leaves out untouched) when the string names no usable key.
   inline bool HotkeyParse(const char* str, HotkeyBind& out) {
+    if (HotkeyIsNoneText(str)) {
+      HotkeyBind none = { 0, false, false, false };
+      out = none;
+      return true;
+    }
+
     HotkeyBind bind = { 0, false, false, false };
     char token[64];
     int token_len = 0;
@@ -153,8 +181,12 @@ namespace OVRInject
     _snprintf_s(out, out_size, _TRUNCATE, "0x%02X", vk);
   }
 
-  // Writes a bind in the format HotkeyParse reads ("Ctrl+Shift+F8").
+  // Writes a bind in the format HotkeyParse reads ("Ctrl+Shift+F8", or "None" when unbound).
   inline void HotkeyFormat(const HotkeyBind& bind, char* out, size_t out_size) {
+    if (HotkeyIsNone(bind)) {
+      _snprintf_s(out, out_size, _TRUNCATE, "None");
+      return;
+    }
     char key[32];
     HotkeyVkName(bind.vk, key, sizeof(key));
     _snprintf_s(out, out_size, _TRUNCATE, "%s%s%s%s",

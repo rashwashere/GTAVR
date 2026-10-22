@@ -121,6 +121,7 @@ static const char* DEFAULT_INI =
 ";   NumpadAdd, NumpadSub, NumpadMul, NumpadDiv, NumpadDot, Comma, Period,\n"
 ";   Slash, Semicolon, Quote, LBracket, RBracket, Backslash, Minus, Equals,\n"
 ";   Grave - or a raw virtual-key code (decimal, or hex like 0x77).\n"
+"; Set a key to None (or leave it empty) to unbind it; the menu key always stays bound.\n"
 "ToggleKey=Ctrl+Shift+F8\n"
 "ReloadKey=Ctrl+Shift+F9\n"
 "\n"
@@ -145,8 +146,9 @@ static const char* DEFAULT_INI =
 "; Room scale re-anchor (see [RoomScale])\n"
 "ReanchorKey=Ctrl+Shift+Home\n";
 
-// Parses a bind string like "Ctrl+Shift+F8" (format in Hotkey.hpp).
-// Keeps the previous bind when the string has no usable key.
+// Parses a bind string like "Ctrl+Shift+F8" (format in Hotkey.hpp). "None" or
+// an empty value unbinds the function. Keeps the previous bind when the string
+// has no usable key.
 static HotkeyBind ParseBind(const char* str, const HotkeyBind& fallback) {
   HotkeyBind bind = fallback;
   if (!HotkeyParse(str, bind)) {
@@ -684,7 +686,8 @@ void PoseStabilizer::HandleHotkeys() {
   CheckConfigFileChanged(now);
 
   auto fired = [now](const HotkeyBind& bind, BindState& st, bool repeat) -> bool {
-    bool down = (GetAsyncKeyState(bind.vk) & 0x8000) != 0;
+    // An unbound function (None) never fires
+    bool down = !HotkeyIsNone(bind) && (GetAsyncKeyState(bind.vk) & 0x8000) != 0;
     bool result = false;
 
     if (down && !st.was_down) {

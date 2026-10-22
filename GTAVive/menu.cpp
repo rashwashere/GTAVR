@@ -349,6 +349,8 @@ namespace
 	bool g_captureArmed = false;
 	BindId g_captureBind = BIND_COUNT;
 	bool g_resetArmed = false;
+	const char* g_notice = nullptr; // short message in the help line, shown until g_noticeUntil
+	ULONGLONG g_noticeUntil = 0;
 	MenuAction g_pendingAction = MENU_ACTION_NONE;
 	ULONGLONG g_graceUntil = 0;     // keep blocking the menu's game controls briefly after closing
 	RepeatKey g_keyUp, g_keyDown, g_keyLeft, g_keyRight, g_keySelect, g_keyBack, g_keyEsc;
@@ -568,7 +570,7 @@ namespace
 	}
 
 	// Key capture for the Keys page: waits until every key is up, then takes the first key pressed together with
-	// the modifiers held at that moment. Esc cancels.
+	// the modifiers held at that moment. Esc cancels; Delete alone sets the bind to None where that is allowed.
 	void CaptureTick()
 	{
 		bool anyDown = false;
@@ -604,7 +606,14 @@ namespace
 		b.ctrl = (GetAsyncKeyState(VK_CONTROL) & 0x8000) != 0;
 		b.shift = (GetAsyncKeyState(VK_SHIFT) & 0x8000) != 0;
 		b.alt = (GetAsyncKeyState(VK_MENU) & 0x8000) != 0;
-		SetBind(g_captureBind, b);
+		if (pressed == VK_DELETE && !b.ctrl && !b.shift && !b.alt)
+			b.vk = 0;   // None
+		if (!SetBind(g_captureBind, b))
+		{
+			g_notice = "The menu key and the menu navigation keys can not be None.";
+			g_noticeUntil = GetTickCount64() + 3000;
+			return;
+		}
 		char text[64];
 		OVRInject::HotkeyFormat(b, text, sizeof(text));
 		Trace("MENU: %s = %s\n", GetBindInfo(g_captureBind).iniKey, text);
@@ -692,6 +701,13 @@ namespace
 		case ROW_KEY:
 			if (g_capturing && g_captureBind == (BindId)r.target)
 				strcpy_s(v, "Press keys...");
+			else if (OVRInject::HotkeyIsNone(GetBind((BindId)r.target)) && !BindCanBeNone((BindId)r.target))
+			{
+				// A navigation bind set to None in the file navigates with its default key
+				char def[32];
+				GetEffectiveBindText((BindId)r.target, def, sizeof(def));
+				_snprintf_s(v, sizeof(v), _TRUNCATE, "None (uses %s)", def);
+			}
 			else
 				GetBindText((BindId)r.target, v, sizeof(v));
 			break;
@@ -788,8 +804,13 @@ namespace
 		char help[200] = "";
 		int hr = 220, hg = 220, hb = 220;
 		if (g_capturing)
-			_snprintf_s(help, sizeof(help), _TRUNCATE, "Press the new key combination for %s. Esc cancels.",
-				GetBindInfo(g_captureBind).label);
+			_snprintf_s(help, sizeof(help), _TRUNCATE, "Press the new key combination for %s.%s Esc cancels.",
+				GetBindInfo(g_captureBind).label, BindCanBeNone(g_captureBind) ? " Delete = None." : "");
+		else if (g_notice != nullptr && GetTickCount64() < g_noticeUntil)
+		{
+			strcpy_s(help, g_notice);
+			hr = 255; hg = 150; hb = 60;
+		}
 		else if (selectedRow != nullptr)
 		{
 			const Row& r = *selectedRow;
@@ -812,12 +833,12 @@ namespace
 		// key hints
 		Rect(left, y, PANEL_W, FOOT_H, 24, 92, 160, 235);
 		char up[32], down[32], lft[32], rgt[32], sel[32], back[32], hint[200];
-		GetBindText(BIND_MENU_UP, up, sizeof(up));
-		GetBindText(BIND_MENU_DOWN, down, sizeof(down));
-		GetBindText(BIND_MENU_LEFT, lft, sizeof(lft));
-		GetBindText(BIND_MENU_RIGHT, rgt, sizeof(rgt));
-		GetBindText(BIND_MENU_SELECT, sel, sizeof(sel));
-		GetBindText(BIND_MENU_BACK, back, sizeof(back));
+		GetEffectiveBindText(BIND_MENU_UP, up, sizeof(up));
+		GetEffectiveBindText(BIND_MENU_DOWN, down, sizeof(down));
+		GetEffectiveBindText(BIND_MENU_LEFT, lft, sizeof(lft));
+		GetEffectiveBindText(BIND_MENU_RIGHT, rgt, sizeof(rgt));
+		GetEffectiveBindText(BIND_MENU_SELECT, sel, sizeof(sel));
+		GetEffectiveBindText(BIND_MENU_BACK, back, sizeof(back));
 		_snprintf_s(hint, sizeof(hint), _TRUNCATE, "%s/%s select   %s/%s change   %s ok   %s/Esc back", up, down, lft, rgt, sel, back);
 		Text(hint, PANEL_X, y + 0.005f, 0.26f, 255, 255, 255, 255, 1, left, right);
 	}

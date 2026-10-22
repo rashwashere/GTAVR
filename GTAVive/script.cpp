@@ -7,7 +7,7 @@
 // address-level mapping and verification notes.
 //
 // In-game keys, defaults shown; every one can be changed in gtaovr\gtavive.ini [Keys] or in the settings menu
-// (keybinds.cpp, menu.cpp). VR mode starts once EnterVR is pressed with SteamVR connected:
+// (keybinds.cpp, menu.cpp), and every one except OpenMenu can be set to None (no key). VR mode starts once EnterVR is pressed with SteamVR connected:
 //   Ctrl+L       EnterVR - enter VR mode; in VR, re-create the hand weapon prop
 //                (plain L in the alpha; Ctrl is required so that typing 'L'
 //                elsewhere does not trigger VR mode)
@@ -32,6 +32,7 @@
 #include "keybinds.hpp"
 #include "menu.hpp"
 #include "settings.hpp"
+#include "vrstate.hpp"
 #include "joystick.hpp"
 #include "log.hpp"
 
@@ -403,6 +404,7 @@ static MenuAction TickInput(bool vrActive)
 	UpdateKeyReleases();
 	LoadKeyBinds();
 	Menu_Tick(vrActive);
+	VrState::Publish(vrActive, Menu_IsOpen());   // for the VRCam companion: VR on, menu open
 	return Menu_TakeAction();
 }
 
@@ -442,8 +444,12 @@ static void RunVrMode()
 
 		char enterKey[64], message[200];
 		GetBindText(BIND_ENTER_VR, enterKey, sizeof(enterKey));
-		_snprintf_s(message, sizeof(message), _TRUNCATE,
-			"GTA: Vive - VR is not ready. Start SteamVR, then press %s again (see gtavrInjectLog.txt).", enterKey);
+		if (OVRInject::HotkeyIsNone(GetBind(BIND_ENTER_VR)))
+			_snprintf_s(message, sizeof(message), _TRUNCATE,
+				"GTA: Vive - VR is not ready. Start SteamVR, then switch VR on again (see gtavrInjectLog.txt).");
+		else
+			_snprintf_s(message, sizeof(message), _TRUNCATE,
+				"GTA: Vive - VR is not ready. Start SteamVR, then press %s again (see gtavrInjectLog.txt).", enterKey);
 		VrNotify(message);
 
 		WAIT(0);
@@ -954,8 +960,14 @@ static void RunVrMode()
 			ENTITY::RESET_ENTITY_ALPHA(offPed);
 			g_vrManualOff = true;
 			char offKey[64], message[160];
+			// The key that turns VR back on: VROff, else EnterVR, else (both None) the settings menu
 			GetBindText(BIND_VR_OFF, offKey, sizeof(offKey));
-			_snprintf_s(message, sizeof(message), _TRUNCATE, "GTA: Vive - VR off. %s turns it back on.", offKey);
+			if (OVRInject::HotkeyIsNone(GetBind(BIND_VR_OFF)))
+				GetBindText(BIND_ENTER_VR, offKey, sizeof(offKey));
+			if (OVRInject::HotkeyIsNone(GetBind(BIND_VR_OFF)) && OVRInject::HotkeyIsNone(GetBind(BIND_ENTER_VR)))
+				_snprintf_s(message, sizeof(message), _TRUNCATE, "GTA: Vive - VR off. Turn it back on in the settings menu.");
+			else
+				_snprintf_s(message, sizeof(message), _TRUNCATE, "GTA: Vive - VR off. %s turns it back on.", offKey);
 			VrNotify(message);
 			return;
 		}

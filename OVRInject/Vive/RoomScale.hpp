@@ -150,7 +150,7 @@ namespace RoomScale {
     if (md < 0 || md >= MODE_COUNT) md = MODE_WALK;
     if (wfl < wmn + 0.01f) wfl = wmn + 0.01f;   // keep the fade band non-empty
 
-    // Re-anchor bind; an unreadable value falls back to the default
+    // Re-anchor bind; None or empty unbinds it, an unreadable value falls back to the default
     char keyText[64] = { 0 };
     GetPrivateProfileStringA("Hotkeys", "ReanchorKey", "Ctrl+Shift+Home", keyText, sizeof(keyText), ini);
     OVRInject::HotkeyBind key = { VK_HOME, true, true, false };
@@ -204,7 +204,7 @@ namespace RoomScale {
     Reload();
     State& s = S();
 
-    bool down = (GetAsyncKeyState(s.reanchorKey.vk) & 0x8000) != 0;
+    bool down = !OVRInject::HotkeyIsNone(s.reanchorKey) && (GetAsyncKeyState(s.reanchorKey.vk) & 0x8000) != 0;
     if (down && !s.keyWasDown && OVRInject::HotkeyModifiersMatch(s.reanchorKey)) {
       s.reanchorRequested = true;
       LOGSTRF("RoomScale: re-anchor requested by hotkey\n");
