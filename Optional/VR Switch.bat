@@ -1,10 +1,11 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
-title VR Enabler - GTA:Vive
+title VR Switch - GTA:Vive
 
 rem ============================================================
-rem  Switches GTA:Vive on or off for the game in the folder this
-rem  file sits in (next to GTA5.exe or GTA5_Enhanced.exe).
+rem  Optional. Switches GTA:Vive on or off for the game this file
+rem  belongs to: it can sit in the game folder (next to GTA5.exe or
+rem  GTA5_Enhanced.exe) or in a folder inside it, such as Optional.
 rem    1 = enable, 2 = disable, 3 = exit.
 rem
 rem  GTAVive is found by CONTENT, not by name: the .asi / .as file
@@ -15,16 +16,17 @@ rem
 rem  With GTAVive off, OVRInject.dll never loads, so the game does
 rem  not start SteamVR.
 rem
-rem  No menu, for a shortcut:  "VR Enabler.bat" /do enable|disable
+rem  No menu, for a shortcut:  "VR Switch.bat" /do enable|disable
 rem ============================================================
 
 set "GP=%~dp0"
 set "GP=!GP:~0,-1!"
+if not exist "!GP!\GTA5.exe" if not exist "!GP!\GTA5_Enhanced.exe" for %%P in ("!GP!\..") do set "GP=%%~fP"
 
 if not exist "!GP!\GTA5.exe" if not exist "!GP!\GTA5_Enhanced.exe" (
   echo.
-  echo  Put this file in the GTA V game folder, next to GTA5.exe or GTA5_Enhanced.exe,
-  echo  and run it from there.
+  echo  Put this file in the GTA V game folder ^(next to GTA5.exe or GTA5_Enhanced.exe^)
+  echo  or in a folder inside it, and run it from there.
   echo.
   if /i not "%~1"=="/do" pause
   exit /b 1

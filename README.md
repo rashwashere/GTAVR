@@ -27,13 +27,12 @@ This is a continuation of [veryjos/GTAV_OpenVR](https://github.com/veryjos/GTAV_
 ## Install
 
 1. Install [Script Hook V](http://www.dev-c.com/gtav/scripthookv/) with an ASI loader.
-2. Copy everything from the release zip into the GTA V folder (where `GTA5.exe` or `GTA5_Enhanced.exe` is):
-   `GTAVive.asi`, `OVRInject.dll`, `openvr_api.dll`, the `gtaovr` folder and `VR Enabler.bat`.
+2. Copy `GTAVive.asi`, `OVRInject.dll`, `openvr_api.dll` and the `gtaovr` folder from the release zip into the GTA V Enhanced folder (next to `GTA5_Enhanced.exe`).
 3. Start SteamVR, then the game.
 4. In story mode press **Ctrl+L** to enter VR.
 5. On GTA V Enhanced, turn HDR off.
 
-`VR Enabler.bat` (run it from the game folder) switches the mod on or off without deleting anything.
+**Optional:** `Optional\VR Switch.bat` switches the mod on or off without deleting anything. Copy the `Optional` folder into the game folder (or put the file next to `GTA5_Enhanced.exe`) and run it from there.
 
 ## Controls
 
@@ -107,4 +106,5 @@ The output goes to `x64\Release\`: `OVRInject.dll` and `GTAVive.asi`.
 
 - Joseph Delgado ([veryjos](https://github.com/veryjos)): original GTA: Vive and OVRInject.
 - Alexander Blade: Script Hook V.
+- theBmag: [VRcam](https://github.com/theBmag/VRcam), the GTA V camera mod whose ideas helped shape this project.
 - Valve: OpenVR. Tsuda Kageyu: MinHook. Cameron Desrochers: readerwriterqueue.
