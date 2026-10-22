@@ -8,6 +8,7 @@
 #include "MinHook.h"
 #include "Vive/HMDSupport.hpp"
 #include "Vive/HMDRenderer.hpp"
+#include "Overlay.hpp"
 
 extern HMODULE dxgiModule;
 
@@ -109,7 +110,8 @@ namespace OVRInject {
 
 	HRESULT __stdcall hookedPresent(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT Flags)
 	{
-		if (first_deviceAndChain)
+		// First Present, or VR was not up and the EnterVR key asked again
+		if (first_deviceAndChain || hmdSupport->TakeVRRetry())
 		{
 			LOGSTRF("Initializing HMDSupport..\n");
 
@@ -122,6 +124,10 @@ namespace OVRInject {
 
 			return S_OK;
 		}
+
+		// Draw the stabilizer overlay onto the backbuffer BEFORE mirroring,
+		// so it is visible on the monitor and inside the VR view
+		Overlay_Render(pSwapChain);
 
 		// Steal the backbuffer from the D3D rendering context
 		ID3D11Texture2D* pBuffer;

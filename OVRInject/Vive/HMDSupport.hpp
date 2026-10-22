@@ -42,6 +42,19 @@ namespace OVRInject
 		*/
     OVR_API bool Initialize(IDXGISwapChain* swap_chain, ID3D11Device* device);
 
+    /**
+    True once after IsVRReady() was asked while VR is not up. The Present
+    hook then runs Initialize again, so VR can start after a failed first
+    attempt (SteamVR started after the game).
+    */
+    bool TakeVRRetry();
+
+    /**
+    False until OpenVR and the renderer are up. None of the pose accessors
+    below may be used before this returns true.
+    */
+    OVR_API bool IsVRReady();
+
 		/**
 		Submits a screen texture to an eye from D3D. Safe to call from any
     thread.
@@ -85,6 +98,13 @@ namespace OVRInject
 
     inline HMDRenderer* GetRenderer() {
       return renderer_;
+    };
+
+    // VR readiness WITHOUT side effects. IsVRReady() also asks OVRInject to retry starting VR when it is
+    // not up (a VR_Init on the next Present); this only reads the flag, which OVRInject only ever sets to true.
+    // Inline and reading an existing member, so it adds no export and does not change the class layout.
+    inline bool IsVRReadyPassive() const {
+      return vr_ready_;
     };
 
     /**
@@ -233,5 +253,9 @@ namespace OVRInject
 
     IDXGISwapChain* swap_chain_;
     bool desktop_mirroring_;
+
+    // Appended last: GTAVive.asi reads the members above at fixed offsets
+    // through inlined accessors, so their layout must not change
+    bool vr_ready_;
 	};
 }

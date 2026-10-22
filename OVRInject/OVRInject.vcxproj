@@ -22,32 +22,32 @@
     <ProjectGuid>{3F9A3015-DAE3-4352-AF17-74B127E1C813}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>OVRInject</RootNamespace>
-    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -90,6 +90,7 @@
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;OVRINJECT_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
+      <AdditionalOptions>/PDBALTPATH:%_PDB% %(AdditionalOptions)</AdditionalOptions>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
@@ -104,14 +105,13 @@
       <AdditionalIncludeDirectories>$(SolutionDir)\OVRInject;$(SolutionDir)\ThirdParty\minhook\include;$(SolutionDir)\ThirdParty\openvr\headers;$(SolutionDir)\ThirdParty\glew;$(SolutionDir)\ThirdParty\readerwriterqueue</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
+      <AdditionalOptions>/PDBALTPATH:%_PDB% %(AdditionalOptions)</AdditionalOptions>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>d3dcompiler.lib;d3d11.lib;opengl32.lib;glu32.lib;glew32s.lib;openvr_api.lib;d3d11.lib;libMinHook.x64.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>d3dcompiler.lib;d3d11.lib;openvr_api.lib;d3d11.lib;libMinHook.x64.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <DelayLoadDLLs>openvr_api.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
       <AdditionalLibraryDirectories>$(SolutionDir)\ThirdParty\</AdditionalLibraryDirectories>
     </Link>
-    <PostBuildEvent>
-      <Command>copy "C:\dev\GTAVOVR\x64\Debug\OVRInject.dll" "C:\Program Files (x86)\Steam\steamapps\common\Grand Theft Auto V\OVRInject.dll"</Command>
-    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -124,6 +124,7 @@
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;OVRINJECT_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
+      <AdditionalOptions>/PDBALTPATH:%_PDB% %(AdditionalOptions)</AdditionalOptions>
       <SubSystem>Windows</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
@@ -142,16 +143,15 @@
       <AdditionalIncludeDirectories>$(SolutionDir)\OVRInject;$(SolutionDir)\ThirdParty\minhook\include;$(SolutionDir)\ThirdParty\openvr\headers;$(SolutionDir)\ThirdParty\glew;$(SolutionDir)\ThirdParty\readerwriterqueue</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
+      <AdditionalOptions>/PDBALTPATH:%_PDB% %(AdditionalOptions)</AdditionalOptions>
       <SubSystem>Windows</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>d3dcompiler.lib;d3d11.lib;opengl32.lib;glu32.lib;glew32s.lib;openvr_api.lib;libMinHook.x64.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>d3dcompiler.lib;d3d11.lib;openvr_api.lib;libMinHook.x64.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <DelayLoadDLLs>openvr_api.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
       <AdditionalLibraryDirectories>$(SolutionDir)\ThirdParty\</AdditionalLibraryDirectories>
     </Link>
-    <PostBuildEvent>
-      <Command>copy "C:\dev\GTAVOVR\x64\Release\OVRInject.dll" "C:\Program Files (x86)\Steam\steamapps\common\Grand Theft Auto V\OVRInject.dll"</Command>
-    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="D3DHook\D3DHooks.hpp" />
@@ -159,9 +159,11 @@
     <ClInclude Include="Detour\DetouredFuncs.hpp" />
     <ClInclude Include="Detour\DetourManager.hpp" />
     <ClInclude Include="Log.hpp" />
+    <ClInclude Include="Overlay.hpp" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="Vive\HMDRenderer.hpp" />
     <ClInclude Include="Vive\HMDSupport.hpp" />
+    <ClInclude Include="Vive\Hotkey.hpp" />
     <ClInclude Include="Vive\Math\Helpers.hpp" />
     <ClInclude Include="Vive\Math\Matrices.h" />
     <ClInclude Include="Vive\Math\Vectors.h" />
@@ -169,6 +171,9 @@
     <ClInclude Include="Vive\Scene\Object.hpp" />
     <ClInclude Include="Vive\Scene\RenderScene.hpp" />
     <ClInclude Include="Vive\Scene\SimpleShader.hpp" />
+    <ClInclude Include="Vive\PoseStabilizer.hpp" />
+    <ClInclude Include="Vive\PoseTiming.hpp" />
+    <ClInclude Include="Vive\RoomScale.hpp" />
     <ClInclude Include="Vive\TrackedController.hpp" />
   </ItemGroup>
   <ItemGroup>
@@ -189,8 +194,11 @@
       </PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="Log.cpp" />
+    <ClCompile Include="OpenVRPrivateLoad.cpp" />
+    <ClCompile Include="Overlay.cpp" />
     <ClCompile Include="Vive\HMDRenderer.cpp" />
     <ClCompile Include="Vive\HMDSupport.cpp" />
+    <ClCompile Include="Vive\PoseStabilizer.cpp" />
     <ClCompile Include="Vive\Math\Matrices.cpp" />
     <ClCompile Include="Vive\Scene\Object.cpp" />
     <ClCompile Include="Vive\Scene\RenderScene.cpp" />

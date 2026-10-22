@@ -216,7 +216,7 @@ UpgradeLog*.htm
 # Microsoft Fakes
 FakesAssemblies/
 
-# GhostDoc plugin setting file
+# GhostDoc setting file
 *.GhostDoc.xml
 
 # Node.js Tools for Visual Studio
@@ -276,3 +276,25 @@ _Pvt_Extensions
 *.exe
 *.out
 *.app
+
+### GTA:Vive ###
+# Built mod binaries and linker by-products
+*.asi
+*.as
+*.exp
+
+# Import libraries generated or copied into ThirdParty (ScriptHookV.lib,
+# libMinHook.x64.lib, openvr_api.lib); also covered by *.lib above
+ThirdParty/*.lib
+ThirdParty/*.exp
+
+# Runtime logs and config written by the mod or the tests
+gtavrInjectLog.txt
+native_trace.log
+stdout.txt
+stabilizer.ini
+
+# Test outputs
+Tests/**/out/
+Tests/TraceHarness/run_orig/
+Tests/TraceHarness/run_new/

@@ -41,5 +41,6 @@ BOOL APIENTRY DllMain( HMODULE hModule,
 
 void init()
 {
+	LOGSTRF("OVRInject: using the D3D11 path\n");
 	detourManager = new D3D11DetourManager();
 }

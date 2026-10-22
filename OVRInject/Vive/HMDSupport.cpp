@@ -4,7 +4,9 @@
 #include "HMDRenderer.hpp"
 
 #include "Log.hpp"
+#include "PoseTiming.hpp"
 
+#include <atomic>
 #include <cstdio>
 #include <dxgi.h>
 #include <string>
@@ -14,7 +16,8 @@ using namespace vr;
 
 HMDSupport::HMDSupport() :
     device_(nullptr), renderer_(new HMDRenderer(this)),
-    desktop_mirroring_(true) {
+    hmd_(nullptr), compositor_(nullptr), chaperone_(nullptr),
+    desktop_mirroring_(true), vr_ready_(false) {
 }
 
 HMDSupport::~HMDSupport() {
@@ -34,7 +37,7 @@ bool HMDSupport::Initialize(IDXGISwapChain* swap_chain, ID3D11Device* device) {
 	if (error) {
 		hmd_ = NULL;
 
-		LOGSTRF("HMDSupport Initialize error: %s", VR_GetVRInitErrorAsEnglishDescription(error));
+		LOGSTRF("HMDSupport Initialize error: %s\n", VR_GetVRInitErrorAsEnglishDescription(error));
 
 		return false;
 	}
@@ -51,7 +54,23 @@ bool HMDSupport::Initialize(IDXGISwapChain* swap_chain, ID3D11Device* device) {
 
 	LOGSTRF("Successfully initialized HMDSupport\n");
 
+  vr_ready_ = true;
+
 	return true;
+}
+
+// Set by IsVRReady() while VR is not up; the next Present runs Initialize again
+static std::atomic_bool g_vr_retry(false);
+
+bool HMDSupport::IsVRReady() {
+  if (!vr_ready_)
+    g_vr_retry = true;
+
+  return vr_ready_;
+}
+
+bool HMDSupport::TakeVRRetry() {
+  return !vr_ready_ && g_vr_retry.exchange(false);
 }
 
 void HMDSupport::SubmitFrameTexture(int eye_index, ID3D11Texture2D* texture, const unsigned int& time)
@@ -85,8 +104,30 @@ void HMDSupport::SetZS(float zs) {
   renderer_->SetZS(zs);
 }
 
+// Game thread, once per GTAVive script tick (see PoseTiming.hpp).
+//   PoseTiming=0: wait for the next HMD pose. The HMD thread wrote hmd_matrix_.
+//   PoseTiming=1/2: no wait; sample the pose ring at this frame's own time and
+//   write hmd_matrix_ here, so motion follows real game frame time.
 void HMDSupport::SyncOnPoses() {
-  renderer_->WaitGetPosesSimple();
+  double t0 = PoseTiming::Now();
+  int mode = PoseTiming::Mode();
+
+  if (mode == 0)
+    renderer_->WaitGetPosesSimple();
+
+  double t1 = PoseTiming::Now();
+  PoseTiming::Sample s;
+  double age = 0.0;
+
+  if (PoseTiming::SampleNow(mode, t1, &s, &age) && mode != 0) {
+    float m[16];
+    PoseTiming::MatrixFromPose(s.view, m);
+    Matrix4 mat(m);
+    mat.invert();
+    hmd_matrix_ = mat;
+  }
+
+  PoseTiming::GameTick(t0, t1 - t0, age);
 }
 
 void HMDSupport::SetDesktopMirroring(bool enable) {
