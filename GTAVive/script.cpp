@@ -18,7 +18,8 @@
 //                (tilt = steer, trigger = accelerate, pad = brake)
 //   U            MeleeCalibrationDump - write the prop rotation calibration
 //                values (kx/ky/kz) to gravovrvalues.txt
-//   Ctrl+F6      OpenMenu - open / close the settings menu (VR on or off)
+//   Ctrl+F5      OpenMenu - open / close the settings menu (VR on or off); while VRCam
+//                runs on the same key, the key opens VRCam's menu, which leads here
 //
 // Right controller: trigger = fire, menu = cycle weapon (pistol / micro SMG /
 // assault shotgun / RPG), grip = knuckle-duster melee (capsule swing test +

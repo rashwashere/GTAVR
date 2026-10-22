@@ -1,7 +1,8 @@
 #pragma once
 
 // In-game settings menu, drawn with screen natives so it shows on the game image (and so in the headset).
-// Opened with the OpenMenu bind (default Ctrl+F6). Every change is written to its ini file at once and applies live.
+// Opened with the OpenMenu bind (default Ctrl+F5), or from VRCam's menu when VRCam runs (see menu.cpp). Every change
+// is written to its ini file at once and applies live.
 
 enum MenuAction
 {

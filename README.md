@@ -20,7 +20,7 @@ Best with VRCam (camera rat, flashlight, zoom, viewfinder): https://github.com/r
   - the view tilting with vehicles and with a falling character;
   - VR height offset;
   - re-centre view, VR off/on in game, and auto-start VR.
-- **In-game settings menu** (Ctrl+F6): every gameplay, stabilizer and room scale option, live and saved to the ini files.
+- **In-game settings menu** (Ctrl+F5): every gameplay, stabilizer and room scale option, live and saved to the ini files.
 - **Rebindable keys**: every keyboard function can be changed in the menu or in the ini files, or unbound.
 - **On-screen feedback** for stabilizer changes (`[Overlay]` in `stabilizer.ini`, off by default).
 - VR mode starts on **Ctrl+L**, not plain L. If SteamVR was not running when the game started, start it and press Ctrl+L again.
@@ -46,7 +46,7 @@ These are the defaults. Every key can be changed in the settings menu (Keys page
 
 | Key | Action |
 |---|---|
-| Ctrl+F6 | Open / close the settings menu (`OpenMenu`) |
+| Ctrl+F5 | Open / close the settings menu (`OpenMenu`) |
 | Ctrl+L | Enter VR; while in VR: re-create the hand pistol (`EnterVR`) |
 | Ctrl+Shift+L | VR off / back on (`VROff`) |
 | Ctrl+Shift+C | Re-centre the view inside the character (`RecentreView`) |
@@ -69,7 +69,9 @@ The game's character switch (F5-F8 and the Alt wheel) is disabled while the mod 
 
 **Settings menu**
 
-Press **Ctrl+F6** (`OpenMenu`) to open it, with VR on or off; it is drawn on the game image, so it also shows in the headset. Up/Down select a row, Left/Right change a value (hold to repeat), Enter opens or toggles, Backspace or Esc goes back. While the menu is open these keys, attack and aim do not reach the game. The navigation keys can be rebound too (`MenuUp`, `MenuDown`, `MenuLeft`, `MenuRight`, `MenuSelect`, `MenuBack`); Esc always goes back.
+Press **Ctrl+F5** (`OpenMenu`) to open it, with VR on or off; it is drawn on the game image, so it also shows in the headset. Up/Down select a row, Left/Right change a value (hold to repeat), Enter opens or toggles, Backspace or Esc goes back. While the menu is open these keys, attack and aim do not reach the game. The navigation keys can be rebound too (`MenuUp`, `MenuDown`, `MenuLeft`, `MenuRight`, `MenuSelect`, `MenuBack`); Esc always goes back.
+
+**With VRCam**: when VRCam is installed and both menu keys are the same (Ctrl+F5 by default), the key opens VRCam's menu, whose first row **GTAVR Settings** opens this menu. Backspace or Esc on this menu's main page then goes back to VRCam's menu, and Ctrl+F5 closes everything. If you give the two menus different keys, each key opens its own menu, and the GTAVR Settings row still works. While either menu is open, the keys of the other mod do not act.
 
 | Page | Contents |
 |---|---|
