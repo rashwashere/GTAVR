@@ -8,6 +8,7 @@
 #include "MinHook.h"
 #include "Vive/HMDSupport.hpp"
 #include "Vive/HMDRenderer.hpp"
+#include "Overlay.hpp"
 
 extern HMODULE dxgiModule;
 
@@ -122,6 +123,10 @@ namespace OVRInject {
 
 			return S_OK;
 		}
+
+		// Draw the stabilizer overlay onto the backbuffer BEFORE mirroring,
+		// so it is visible on the monitor and inside the VR view
+		Overlay_Render(pSwapChain);
 
 		// Steal the backbuffer from the D3D rendering context
 		ID3D11Texture2D* pBuffer;

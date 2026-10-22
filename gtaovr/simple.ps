@@ -1,0 +1,13 @@
+Texture2D diffuse;
+SamplerState sample_type;
+
+struct PixelInputType
+{
+	float4 position : SV_POSITION;
+    float2 texcoord : TEXCOORD0;
+};
+
+float4 SimplePixelShader(PixelInputType input) : SV_TARGET
+{
+	return diffuse.Sample(sample_type, input.texcoord);
+};

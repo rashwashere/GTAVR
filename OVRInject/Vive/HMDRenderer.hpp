@@ -36,6 +36,12 @@ namespace OVRInject
 		*/
 		virtual void Initialize(ID3D11DeviceContext* gta_context, ID3D11Texture2D* backbuffer_texture);
 
+    /**
+    Starts the renderer thread for a D3D12 game. There is no game-side
+    D3D11 device; frames are pulled from D3D12Capture's shared textures.
+    */
+    void InitializeD3D12();
+
 		/**
 		Safe to calls this from outside the rendering thread
 
@@ -110,6 +116,17 @@ namespace OVRInject
 
     static bool RenderThreadEntry(HMDRenderer* renderer);
     void RenderThread();
+
+    /**
+    Creates device_ on the adapter the D3D12 game renders on, shared
+    textures can't be opened across adapters
+    */
+    HRESULT CreateDeviceOnGameAdapter();
+
+    bool d3d12_mode_;
+    UINT d3d12_generation_;
+    ID3D11Texture2D* d3d12_textures_[NUM_TEXTURES_TO_BUFFER];
+    int d3d12_slot_;
 
 		std::thread thread_handle_;
 		DWORD thread_id_;

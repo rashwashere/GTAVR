@@ -1,0 +1,16 @@
+LIBRARY openvr_api
+EXPORTS
+	VRControlPanel
+	VRDashboardManager
+	VRTrackedCamera
+	VR_GetGenericInterface
+	VR_GetInitToken
+	VR_GetStringForHmdError
+	VR_GetVRInitErrorAsEnglishDescription
+	VR_GetVRInitErrorAsSymbol
+	VR_InitInternal
+	VR_IsHmdPresent
+	VR_IsInterfaceVersionValid
+	VR_IsRuntimeInstalled
+	VR_RuntimePath
+	VR_ShutdownInternal

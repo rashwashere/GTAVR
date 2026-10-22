@@ -9,14 +9,37 @@
 
 #pragma warning(push, 0)
 
+// This log is append-only and shared with GTAVive, so lines from earlier runs
+// stay in the file. Every line carries a wall-clock time and every run opens
+// with a banner, so old lines can be told apart from the current run.
+static void LogStamp(FILE* fp)
+{
+	static bool banner = false;
+	if (!banner)
+	{
+		banner = true;
+		SYSTEMTIME d;
+		GetLocalTime(&d);
+		fprintf(fp, "\n===== OVRInject run start %04d-%02d-%02d %02d:%02d:%02d =====\n",
+			d.wYear, d.wMonth, d.wDay, d.wHour, d.wMinute, d.wSecond);
+	}
+
+	SYSTEMTIME st;
+	GetLocalTime(&st);
+	fprintf(fp, "%02d:%02d:%02d.%03d [ovr] ", st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
+}
+
 void LOGSTRF(char* format, ...)
 {
 	va_list args;
 	va_start(args, format);
 
 	FILE* fp = fopen("gtavrInjectLog.txt", "a");
-	vfprintf(fp, format, args);
-	fclose(fp);
+	if (fp != NULL) {
+		LogStamp(fp);
+		vfprintf(fp, format, args);
+		fclose(fp);
+	}
 
 	va_end(args);
 };

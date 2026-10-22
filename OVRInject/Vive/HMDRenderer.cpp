@@ -3,13 +3,19 @@
 #include "HMDRenderer.hpp"
 
 #include "Vive/Math/Matrices.h"
+#include "Vive/PoseStabilizer.hpp"
 #include "Scene/RenderScene.hpp"
+#include "D3D12Hook/D3D12Capture.hpp"
 
 #include "openvr.h"
 #include "Log.hpp"
 
 #include <mutex>
 #include <condition_variable>
+#include "RoomScale.hpp"
+#include "PoseTiming.hpp"
+
+#pragma comment(lib, "dxgi.lib")
 
 using namespace vr;
 using namespace OVRInject;
@@ -23,8 +29,12 @@ HMDRenderer::HMDRenderer(HMDSupport* hmd_support) :
     spinlock_(false),
     hs_(0.493500f),
     vs_(0.396747f),
-    zs_(1.0f) {
+    zs_(1.0f),
+    gta_device_(nullptr), gta_context_(nullptr),
+    d3d12_mode_(false), d3d12_generation_(0), d3d12_textures_(), d3d12_slot_(-1) {
 }
+
+static_assert(NUM_TEXTURES_TO_BUFFER == D3D12_CAPTURE_SLOTS, "render thread mirrors the capture ring 1:1");
 
 static std::future<bool> posesReady;
 static std::mutex poseMutex;
@@ -55,6 +65,52 @@ void HMDRenderer::Initialize(ID3D11DeviceContext* gta_context, ID3D11Texture2D* 
   // STInit();
 
   jfawklejf = true;
+}
+
+void HMDRenderer::InitializeD3D12() {
+  d3d12_mode_ = true;
+
+  // No frame yet, the render loop idles on poses until one arrives
+  last_frame_texture_ = nullptr;
+
+  thread_handle_ = std::thread(RenderThreadEntry, this);
+
+  jfawklejf = true;
+}
+
+HRESULT HMDRenderer::CreateDeviceOnGameAdapter() {
+  LUID luid = D3D12Capture::Singleton()->GetAdapterLuid();
+
+  IDXGIFactory1* factory = nullptr;
+  HRESULT result = CreateDXGIFactory1(__uuidof(IDXGIFactory1), (void**)&factory);
+  if (FAILED(result))
+    return result;
+
+  IDXGIAdapter1* adapter = nullptr;
+  for (UINT i = 0; factory->EnumAdapters1(i, &adapter) != DXGI_ERROR_NOT_FOUND; ++i) {
+    DXGI_ADAPTER_DESC1 desc;
+    adapter->GetDesc1(&desc);
+
+    if (desc.AdapterLuid.LowPart == luid.LowPart && desc.AdapterLuid.HighPart == luid.HighPart) {
+      LOGSTRF("HMDRenderer using the game's adapter: %ls\n", desc.Description);
+      break;
+    }
+
+    adapter->Release();
+    adapter = nullptr;
+  }
+
+  if (adapter == nullptr)
+    LOGSTRF("HMDRenderer could not find the game's adapter, falling back to the default one\n");
+
+  result = D3D11CreateDevice(adapter, adapter ? D3D_DRIVER_TYPE_UNKNOWN : D3D_DRIVER_TYPE_HARDWARE, nullptr, 0,
+                             nullptr, 0, D3D11_SDK_VERSION, &device_, 0, &device_context_);
+
+  if (adapter)
+    adapter->Release();
+  factory->Release();
+
+  return result;
 }
 
 int lastTex = 0;
@@ -512,8 +568,11 @@ void HMDRenderer::STPush(FrameTexture* tex) {
 }
 
 void HMDRenderer::RenderThread() {
+  g_pose_stabilizer.LoadConfig();
+
   // Initialize D3D11 state
-  HRESULT result = 
+  HRESULT result = d3d12_mode_ ?
+      CreateDeviceOnGameAdapter() :
       D3D11CreateDevice(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, 0, nullptr,
                         0, D3D11_SDK_VERSION, &device_, 0, &device_context_);
 
@@ -522,7 +581,9 @@ void HMDRenderer::RenderThread() {
 
   InitializeRenderTargets();
 
-  InitializeSharedResources();
+  // The D3D12 ring is opened (and reopened on resize) inside the loop
+  if (!d3d12_mode_)
+    InitializeSharedResources();
 
   LOGSTRF("Created render targets and shared resources\n");
 
@@ -572,8 +633,62 @@ void HMDRenderer::RenderThread() {
     //  sorted_frame_textures_.push_back(tex);
     //}
 
+    // D3D12 game: show the newest frame the GPU finished copying
+    if (d3d12_mode_) {
+      frameMutex.lock();
+
+      D3D12Capture* capture = D3D12Capture::Singleton();
+
+      int slot = -1;
+      if (capture->SyncSharedTextures(device_, d3d12_textures_, &d3d12_generation_))
+        slot = capture->AcquireLatestFrame(d3d12_generation_);
+
+      if (slot == -1) {
+        // Resized or not started yet, the old textures are gone
+        d3d12_slot_ = -1;
+
+        frameMutex.unlock();
+        WaitGetPoses();
+        posesUpdated = true;
+
+        continue;
+      }
+
+      if (slot != d3d12_slot_) {
+        ID3D11ShaderResourceView* old_view = d3d12_slot_ != -1 ? screen_obj->GetTexture() : nullptr;
+
+        if (screen_obj->SetTexture(d3d12_textures_[slot])) {
+          if (old_view != nullptr)
+            old_view->Release();
+        } else if (d3d12_slot_ == -1) {
+          LOGSTRF("HMDRenderer failed to create a view of shared texture %d\n", slot);
+
+          frameMutex.unlock();
+          WaitGetPoses();
+          posesUpdated = true;
+
+          continue;
+        }
+
+        d3d12_slot_ = slot;
+      }
+
+      // The screen stays locked in front of the head, like the D3D11 path
+      auto cam = scene.GetCamera();
+      cam->SetViewMatrix(view_mat_);
+
+      screen_obj->position.x = cam->position.x + cam->GetForwardVector().x * 2.0f * zs_;
+      screen_obj->position.y = cam->position.y + cam->GetForwardVector().y * 2.0f * zs_;
+      screen_obj->position.z = cam->position.z + cam->GetForwardVector().z * 2.0f * zs_;
+
+      screen_obj->focus.x = cam->position.x;
+      screen_obj->focus.y = cam->position.y;
+      screen_obj->focus.z = cam->position.z;
+
+      screen_obj->up = cam->up;
+    }
     // Render earliest frames, no skip
-    if (frame_hueristic_ == 0) {
+    else if (frame_hueristic_ == 0) {
       FrameTexture* early_tex = nullptr;
       unsigned int early_index;
       if (!sorted_frame_textures_.empty()) {
@@ -970,6 +1085,12 @@ void HMDRenderer::WaitGetPoses() {
 
   // Get device poses / sync with renderer
   compositor->WaitGetPoses(&poses_[0], k_unMaxTrackedDeviceCount, nullptr, 0);
+  // The pose's timestamp is taken HERE, before any ini reads or log writes
+  // below, which can take a few ms and would otherwise date the sample late.
+  double tPose = PoseTiming::Now();
+
+  g_pose_stabilizer.HandleHotkeys();
+  PoseTiming::Reload();
 
   bool updatedRightHand = false;
 
@@ -980,11 +1101,175 @@ void HMDRenderer::WaitGetPoses() {
       switch (hmd->GetTrackedDeviceClass(nDevice)) {
       case TrackedDeviceClass_HMD:
       {
-        Matrix4 mat = ConvertSteamVRMatrixToMatrix4(pose_mat).invert();
+        Matrix4 raw = ConvertSteamVRMatrixToMatrix4(pose_mat);
+
+        // Pose guard: a tracking hiccup (common with phone-based headsets)
+        // can deliver a pose that is NaN, kilometres away or jumps metres in
+        // one frame. The camera math
+        // multiplies that straight into the game camera (flung far away ->
+        // unstreamed world, underwater fog, violent shake), so hold the last
+        // good pose instead and log it. A head cannot move 0.5 m in one frame.
+        static bool haveLast = false;
+        static Matrix4 lastGood;
+        static XMFLOAT3 lastPos = { 0.0f, 0.0f, 0.0f };
+        static unsigned long total = 0, rejected = 0, consecutive = 0;
+        static int lastResult = -1;
+        static ULONGLONG lastLog = 0;
+        static XMFLOAT3 hop = { 0.0f, 0.0f, 0.0f }; // absorbed tracking hops, subtracted from the pose
+        static unsigned long hops = 0;
+
+        ++total;
+        XMFLOAT3 p = raw.GetPosition();
+        int result = (int)poses_[nDevice].eTrackingResult;
+        const char* reason = nullptr;
+        bool rawRepeated = PoseTiming::NoteRaw(tPose, raw.get(), result == TrackingResult_Running_OK);
+
+        if (result != lastResult) {
+          // Tracking coming BACK is a re-baseline, so drop the offset
+          // here too. The driver usually reports recovery before it delivers
+          // the relocated position, so catching it on this edge clears the
+          // offset a frame or two earlier than the jump test below would, and
+          // covers a recentre that lands too close to the old pose to trip it.
+          if (lastResult != -1 && result == TrackingResult_Running_OK &&
+              (hop.x != 0.0f || hop.y != 0.0f || hop.z != 0.0f)) {
+            LOGSTRF("PoseGuard: tracking recovered (%d -> %d) - dropping carried offset (%.2f,%.2f,%.2f); the new pose is the baseline now\n",
+                    lastResult, result, hop.x, hop.y, hop.z);
+            hop.x = hop.y = hop.z = 0.0f;
+            RoomScale::RequestReanchor(); // new tracking frame: amplified travel restarts here
+          }
+          LOGSTRF("PoseGuard: HMD tracking result %d -> %d\n", lastResult, result);
+          lastResult = result;
+        }
+
+        if (!(p.x == p.x && p.y == p.y && p.z == p.z) || fabsf(p.x) > 50.0f || fabsf(p.y) > 50.0f || fabsf(p.z) > 50.0f)
+          reason = "position not finite / >50 m from origin";
+        else if (result != TrackingResult_Running_OK)
+          reason = "tracking result not Running_OK";
+        else if (haveLast) {
+          // A tracking "hop": the position estimate relocates by more than a
+          // head can move in one frame. Holding the old pose and then snapping
+          // to the new one is itself a visible cut, so absorb the hop instead:
+          // carry it as an offset that keeps the view where it was, and bleed
+          // it away. The offset is bounded three ways below (reset detection,
+          // a cap, proportional bleed) so it can never grow into metres.
+          float dx = p.x - lastPos.x, dy = p.y - lastPos.y, dz = p.z - lastPos.z;
+          float jump = sqrtf(dx * dx + dy * dy + dz * dz);
+
+          if (jump > 0.5f) {
+            // A big jump is not a hop, it is a RESET. A driver re-establishing
+            // tracking typically hands back a clean seated origin, and the
+            // destination gives it away: x/z at zero, y at eye height.
+            // Absorbing a recentre would be exactly backwards - the harder the
+            // tracker recentres, the further off the view would sit. Instead
+            // DROP the carried offset and re-baseline: the new origin is the
+            // truth and the old offset describes a frame of reference that no
+            // longer exists.
+            bool nearOrigin = fabsf(p.x) < 0.30f && fabsf(p.z) < 0.30f;
+            if (jump > 2.0f || nearOrigin) {
+              LOGSTRF("PoseGuard: %.2f m jump to (%.2f,%.2f,%.2f) reads as a tracking RESET, not a hop%s - dropping carried offset (%.2f,%.2f,%.2f) and re-baselining\n",
+                      jump, p.x, p.y, p.z, nearOrigin ? " (landed on origin)" : "",
+                      hop.x, hop.y, hop.z);
+              hop.x = hop.y = hop.z = 0.0f;
+              RoomScale::RequestReanchor(); // new tracking frame: amplified travel restarts here
+            } else {
+              hop.x += dx; hop.y += dy; hop.z += dz;
+              ++hops;
+
+              // CLAMP: unbounded, many small hops would compound into tens
+              // of metres. Past a rotation of the head the offset stops being
+              // a correction and becomes the fault, so cap it and log when
+              // the cap bites.
+              const float MAX_CARRY = 0.30f;
+              float carry = sqrtf(hop.x * hop.x + hop.y * hop.y + hop.z * hop.z);
+              if (carry > MAX_CARRY) {
+                float s = MAX_CARRY / carry;
+                LOGSTRF("PoseGuard: carried offset hit the %.2f m cap (was %.2f m) - clamping; the view will not chase further corruption\n",
+                        MAX_CARRY, carry);
+                hop.x *= s; hop.y *= s; hop.z *= s;
+                carry = MAX_CARRY;
+              }
+
+              LOGSTRF("PoseGuard: absorbed a %.2f m tracking hop (%.2f,%.2f,%.2f)->(%.2f,%.2f,%.2f), carried offset now (%.2f,%.2f,%.2f) = %.2f m - hop #%lu of %lu poses\n",
+                      jump, lastPos.x, lastPos.y, lastPos.z, p.x, p.y, p.z,
+                      hop.x, hop.y, hop.z, carry, hops, total);
+            }
+          }
+        }
+
+        // Never get stuck: if the new place persists for ~1 s, accept it
+        if (reason != nullptr && consecutive >= 90 && p.x == p.x && p.y == p.y && p.z == p.z && fabsf(p.x) < 50.0f && fabsf(p.y) < 50.0f && fabsf(p.z) < 50.0f) {
+          LOGSTRF("PoseGuard: new pose persisted for %lu frames, accepting it as the baseline\n", consecutive);
+          reason = nullptr;
+        }
+
+        if (reason != nullptr) {
+          ++rejected;
+          ++consecutive;
+          if (haveLast)
+            raw = lastGood;
+
+          ULONGLONG now = GetTickCount64();
+          if (now - lastLog > 2000) {
+            lastLog = now;
+            LOGSTRF("PoseGuard: rejected HMD pose (%s) pos=(%.2f,%.2f,%.2f) last=(%.2f,%.2f,%.2f) result=%d - %lu of %lu poses rejected so far\n",
+                    reason, p.x, p.y, p.z, lastPos.x, lastPos.y, lastPos.z, result, rejected, total);
+          }
+
+          if (!haveLast)
+            break; // nothing trustworthy yet, keep the previous view matrix
+        } else {
+          lastPos = p; // raw, so the next hop is measured against real tracking
+
+          // Bleed the offset PROPORTIONALLY, not at a fixed rate. Draining on
+          // a time constant means recovery time is roughly constant regardless
+          // of the offset's size - a big one clears as quickly as a small one.
+          // A 2 cm/s FLOOR makes the last millimetres finish in finite time
+          // instead of approaching zero asymptotically.
+          static ULONGLONG lastBleed = 0;
+          ULONGLONG nowBleed = GetTickCount64();
+          float dtBleed = lastBleed ? (float)(nowBleed - lastBleed) / 1000.0f : 0.0f;
+          lastBleed = nowBleed;
+          float hopLen = sqrtf(hop.x * hop.x + hop.y * hop.y + hop.z * hop.z);
+          if (hopLen > 0.0001f && dtBleed > 0.0f && dtBleed < 0.5f) {
+            const float BLEED_TAU = 2.0f;                         // seconds
+            float rate = hopLen / BLEED_TAU;                      // m/s
+            if (rate < 0.02f) rate = 0.02f;                       // floor
+            float keep = hopLen - rate * dtBleed;
+            keep = keep < 0.0f ? 0.0f : keep / hopLen;
+            hop.x *= keep; hop.y *= keep; hop.z *= keep;
+          }
+
+          raw[12] -= hop.x;
+          raw[13] -= hop.y;
+          raw[14] -= hop.z;
+
+          lastGood = raw;
+          haveLast = true;
+          consecutive = 0;
+        }
+
+        Matrix4 mat = g_pose_stabilizer.Filter(raw);
+        Matrix4 tracked = mat; // real metres, before RoomScale
+
+        // Amplified floor-plane walking. LAST, after PoseGuard and the
+        // stabilizer, so their thresholds stay in real metres. See RoomScale.hpp.
+        RoomScale::Apply(mat);
+
+        // Every processed pose goes into PoseTiming's ring, timestamped, so
+        // the game thread can sample it at its own frame time (PoseTiming.hpp).
+        // A repeat of the previous raw pose (the compositor handing back the same
+        // driver pose) is skipped, or it would show as a brief stall; during a
+        // real freeze one sample still goes in every 50 ms.
+        if (!rawRepeated || PoseTiming::SinceLastPush(tPose) > 0.05)
+          PoseTiming::Push(tPose, mat.get(), tracked.get());
+
+        mat.invert();
 
         view_mat_ = mat.getDXMatrix();
 
-        hmd_support_->hmd_matrix_ = mat;
+        // PoseTiming 1/2: the game thread writes hmd_matrix_ in SyncOnPoses.
+        if (PoseTiming::Mode() == 0)
+          hmd_support_->hmd_matrix_ = mat;
 
         break;
       }
@@ -1018,9 +1303,19 @@ void HMDRenderer::WaitGetPosesSimple() {
     return;
   }
 
+  // The render thread never started (no VR, or no frames hooked), there
+  // is nothing to sync on. Spinning here would hang the whole game.
+  if (!jfawklejf)
+    return;
+
   // Otherwise, we should block until poses are ready
-  while (!posesUpdated)
-    continue;
+  ULONGLONG start = GetTickCount64();
+  unsigned int spins = 0;
+
+  while (!posesUpdated) {
+    if ((++spins & 0xFFFF) == 0 && GetTickCount64() - start > 250)
+      break;
+  }
 
   posesUpdated = false;
 }
