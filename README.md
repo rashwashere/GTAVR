@@ -1,4 +1,4 @@
-# GTAV: Enhanced OpenVR (GTA: Vive)
+# GTAVR: Enhanced
 
 VR support for Grand Theft Auto V using OpenVR, some reverse engineering of the game's renderer, and Script Hook V.
 
