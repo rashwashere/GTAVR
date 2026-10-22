@@ -12,7 +12,7 @@ static const BindInfo kBinds[BIND_COUNT] = {
 	{ "FlyMove",              "1",               "Touchpad fly-move",         "Toggles moving with the right touchpad." },
 	{ "LeftHandSteering",     "2",               "Left-hand steering",        "Toggles steering vehicles by tilting the left controller." },
 	{ "MeleeCalibrationDump", "U",               "Melee calibration dump",    "Writes the melee prop rotation values to gravovrvalues.txt." },
-	{ "OpenMenu",             "Ctrl+F6",         "Open / close this menu",    "Opens and closes the settings menu." },
+	{ "OpenMenu",             "Ctrl+F5",         "Open / close this menu",    "Opens and closes this menu. On the same key as VRCam, it opens VRCam's menu." },
 	{ "MenuUp",               "Up",              "Menu: up",                  "Moves the menu selection up (hold to repeat)." },
 	{ "MenuDown",             "Down",            "Menu: down",                "Moves the menu selection down (hold to repeat)." },
 	{ "MenuLeft",             "Left",            "Menu: decrease",            "Lowers the selected value (hold to repeat)." },

@@ -8,11 +8,17 @@
 // Values are cached while the menu is open and re-read from the files once a second, so edits made in a text
 // editor show up too. Each change is written at once; GTAVive picks up gtavive.ini on its next tick and OVRInject
 // auto-reloads stabilizer.ini.
+//
+// Menu link with VRCam (vrstate.hpp): while VRCam runs and its menu key is the same combination as OpenMenu, that
+// key belongs to VRCam: it opens VRCam's menu, whose "GTAVR Settings" row asks this menu to open (openGtavr). A menu
+// opened that way starts on the main page; Back / Esc there closes it and asks VRCam to open its menu again
+// (backToVrcam), and OpenMenu or VRCam's menu key closes it. With different keys each key opens its own menu.
 
 #include "menu.hpp"
 #include "keybinds.hpp"
 #include "keyboard.hpp"
 #include "settings.hpp"
+#include "vrstate.hpp"
 #include "log.hpp"
 #include "sdk/natives.h"
 
@@ -353,6 +359,11 @@ namespace
 	ULONGLONG g_noticeUntil = 0;
 	MenuAction g_pendingAction = MENU_ACTION_NONE;
 	ULONGLONG g_graceUntil = 0;     // keep blocking the menu's game controls briefly after closing
+	bool g_fromVrcam = false;       // opened from VRCam's menu: Back / Esc on the main page returns there
+	bool g_vrcamPresent = false;    // VRCam's block was valid this tick
+	bool g_vrcamSynced = false;     // g_vrcamRequest holds VRCam's current request counter
+	uint32_t g_vrcamRequest = 0;
+	bool g_vrcamMenuWasOpen = false;
 	RepeatKey g_keyUp, g_keyDown, g_keyLeft, g_keyRight, g_keySelect, g_keyBack, g_keyEsc;
 
 	void ResetRepeatStates()
@@ -460,6 +471,7 @@ namespace
 		g_open = false;
 		g_capturing = false;
 		g_resetArmed = false;
+		g_fromVrcam = false;
 		g_graceUntil = GetTickCount64() + 300;
 		IgnoreReleaseOfHeldKeys();
 		Trace("MENU: closed\n");
@@ -468,7 +480,15 @@ namespace
 	void GoBack()
 	{
 		if (g_page == PAGE_MAIN)
+		{
+			bool toVrcam = g_fromVrcam && g_vrcamPresent;
 			CloseMenu();
+			if (toVrcam)
+			{
+				VrState::SignalBackToVrcam();
+				Trace("MENU: back to VRCam\n");
+			}
+		}
 		else
 		{
 			Page from = g_page;
@@ -617,6 +637,26 @@ namespace
 		char text[64];
 		OVRInject::HotkeyFormat(b, text, sizeof(text));
 		Trace("MENU: %s = %s\n", GetBindInfo(g_captureBind).iniKey, text);
+	}
+
+	// VRCam's menu key from its block (vk 0 when VRCam is not running)
+	HotkeyBind VrcamMenuKey(const VrState::VrcamState& vrcam)
+	{
+		HotkeyBind b = { 0, false, false, false };
+		if (vrcam.present)
+		{
+			b.vk = (int)(vrcam.menuKey & 0xFF);
+			b.ctrl = (vrcam.menuKey & VrState::kVrcamKeyCtrl) != 0;
+			b.shift = (vrcam.menuKey & VrState::kVrcamKeyShift) != 0;
+			b.alt = (vrcam.menuKey & VrState::kVrcamKeyAlt) != 0;
+		}
+		return b;
+	}
+
+	// Same test as BindPressed: released this tick with exactly the key's modifiers held
+	bool HotkeyReleased(const HotkeyBind& b)
+	{
+		return b.vk > 0 && KeyReleasedThisTick((DWORD)b.vk) && OVRInject::HotkeyModifiersMatch(b);
 	}
 
 	// The game's own use of the menu keys (phone, frontend, weapon wheel) and of attack / aim
@@ -858,18 +898,42 @@ void Menu_Tick(bool vrActive)
 	bool focused = IsGameWindowFocused();
 	bool paused = UI::IS_PAUSE_MENU_ACTIVE() != 0;
 
+	// VRCam: running, its menu key, and whether its "GTAVR Settings" row was selected since the last tick
+	VrState::VrcamState vrcam = VrState::ReadVrcam();
+	HotkeyBind vrcamKey = VrcamMenuKey(vrcam);
+	bool vrcamOwnsKey = vrcam.present && OVRInject::HotkeyEqual(vrcamKey, GetEffectiveBind(BIND_OPEN_MENU));
+	bool vrcamRequest = false;
+	g_vrcamPresent = vrcam.present;
+	if (!vrcam.present)
+		g_vrcamSynced = false;
+	else if (!g_vrcamSynced)
+	{
+		g_vrcamSynced = true;
+		g_vrcamRequest = vrcam.openGtavr;
+	}
+	else if (vrcam.openGtavr != g_vrcamRequest)
+	{
+		g_vrcamRequest = vrcam.openGtavr;
+		vrcamRequest = true;
+	}
+
 	if (!g_open)
 	{
-		if (focused && !paused && BindPressedIgnoringSuppression(BIND_OPEN_MENU))
+		// On VRCam's menu key the key press is VRCam's: it opened VRCam's menu, so it does not open this one too
+		bool byKey = focused && !paused && !vrcamOwnsKey && BindPressedIgnoringSuppression(BIND_OPEN_MENU);
+		if (byKey || (vrcamRequest && !paused))
 		{
 			g_open = true;
+			g_fromVrcam = !byKey;
+			if (g_fromVrcam)
+				g_page = PAGE_MAIN;
 			ResetRepeatStates();
 			OpenPage(g_page);
-			Trace("MENU: opened\n");
+			Trace(g_fromVrcam ? "MENU: opened from VRCam\n" : "MENU: opened\n");
 		}
 	}
-	else if (!g_capturing && BindPressedIgnoringSuppression(BIND_OPEN_MENU))
-		CloseMenu();
+	else if (!g_capturing && (BindPressedIgnoringSuppression(BIND_OPEN_MENU) || (g_fromVrcam && HotkeyReleased(vrcamKey))))
+		CloseMenu();   // the menu key closes everything; VRCam's menu stays closed
 
 	if (g_open)
 	{
@@ -954,7 +1018,9 @@ void Menu_Tick(bool vrActive)
 			g_graceUntil = 0;
 	}
 
-	SetBindsSuppressed(g_open || wasOpen);
+	// No bind acts while either menu is open (VRCam's menu uses the arrow keys and Enter, its input box any key)
+	SetBindsSuppressed(g_open || wasOpen || vrcam.menuOpen || g_vrcamMenuWasOpen);
+	g_vrcamMenuWasOpen = vrcam.menuOpen;
 }
 
 bool Menu_IsOpen()
