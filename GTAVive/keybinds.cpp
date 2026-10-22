@@ -9,7 +9,6 @@ static const BindInfo kBinds[BIND_COUNT] = {
 	{ "EnterVR",              "Ctrl+L",          "Enter VR",                  "Starts VR. While in VR it re-creates the hand pistol." },
 	{ "VROff",                "Ctrl+Shift+L",    "VR off / on",               "Hands the view back to the game camera; press again to return to VR." },
 	{ "RecentreView",         "Ctrl+Shift+C",    "Re-centre view",            "Puts the VR view back inside the character." },
-	{ "DesktopMirror",        "0",               "Desktop mirror",            "Shows or hides the game on the monitor while in VR." },
 	{ "FlyMove",              "1",               "Touchpad fly-move",         "Toggles moving with the right touchpad." },
 	{ "LeftHandSteering",     "2",               "Left-hand steering",        "Toggles steering vehicles by tilting the left controller." },
 	{ "MeleeCalibrationDump", "U",               "Melee calibration dump",    "Writes the melee prop rotation values to gravovrvalues.txt." },

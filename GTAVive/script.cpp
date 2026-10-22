@@ -13,7 +13,6 @@
 //                elsewhere does not trigger VR mode)
 //   Ctrl+Shift+L VROff - switch VR off (and back on)
 //   Ctrl+Shift+C RecentreView - re-centre the VR view on the character
-//   0            DesktopMirror - toggle desktop mirroring
 //   1            FlyMove - toggle touchpad fly-move
 //   2            LeftHandSteering - toggle left-controller vehicle steering
 //                (tilt = steer, trigger = accelerate, pad = brake)
@@ -938,8 +937,6 @@ static void RunVrMode()
 			g_flyMoveEnabled = !g_flyMoveEnabled;
 		if (BindPressed(BIND_LEFT_HAND_STEERING))
 			g_leftHandSteering = !g_leftHandSteering;
-		if (BindPressed(BIND_DESKTOP_MIRROR))
-			hmd->SetDesktopMirroring(!hmd->GetDesktopMirroring());
 		// VR off wins when EnterVR and VROff share a key, so that key toggles VR
 		bool vrOffKey = BindPressed(BIND_VR_OFF);
 		if (vrOffKey || menuAction == MENU_ACTION_VR_TOGGLE)
@@ -955,7 +952,6 @@ static void RunVrMode()
 			Ped offPed = PLAYER::GET_PLAYER_PED(0);
 			ENTITY::SET_ENTITY_VISIBLE(offPed, 1, 0);
 			ENTITY::RESET_ENTITY_ALPHA(offPed);
-			hmd->SetDesktopMirroring(true);   // the monitor shows the game again even if mirroring was off (0 key)
 			g_vrManualOff = true;
 			char offKey[64], message[160];
 			GetBindText(BIND_VR_OFF, offKey, sizeof(offKey));

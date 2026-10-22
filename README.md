@@ -48,7 +48,6 @@ These are the defaults. Every key can be changed in the settings menu (Keys page
 | Ctrl+L | Enter VR; while in VR: re-create the hand pistol (`EnterVR`) |
 | Ctrl+Shift+L | VR off / back on (`VROff`) |
 | Ctrl+Shift+C | Re-centre the view inside the character (`RecentreView`) |
-| 0 | Toggle desktop mirroring (`DesktopMirror`) |
 | 1 | Toggle touchpad fly-move (`FlyMove`) |
 | 2 | Toggle left-controller vehicle steering (`LeftHandSteering`) |
 | U | Write the melee prop calibration values to `gravovrvalues.txt` (`MeleeCalibrationDump`) |
