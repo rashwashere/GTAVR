@@ -2,7 +2,9 @@
 
 VR support for Grand Theft Auto V using OpenVR, some reverse engineering of the game's renderer, and Script Hook V.
 
-This is a continuation of [veryjos/GTAV_OpenVR](https://github.com/veryjos/GTAV_OpenVR), the original GTA: Vive by Joseph Delgado. This is the **GTA V Legacy** (D3D11) edition. For GTA V Enhanced, use **GTAVR: Enhanced**, branch [`enhanced`](https://github.com/rashwashere/GTAVR/tree/enhanced) of https://github.com/rashwashere/GTAVR.
+This is a continuation of [veryjos/GTAV_OpenVR](https://github.com/veryjos/GTAV_OpenVR), the original GTA: Vive by Joseph Delgado. This is the **GTA V Legacy** (D3D11) edition. 
+
+**GTAVR: Enhanced:** [`enhanced release`](https://github.com/rashwashere/GTAVR/tree/enhanced)
 
 Best with VRCam (camera rat, flashlight, zoom, viewfinder): https://github.com/rashwashere/VRcamPlus (branch legacy)
 
