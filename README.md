@@ -7,6 +7,7 @@ This is a continuation of [veryjos/GTAV_OpenVR](https://github.com/veryjos/GTAV_
 The original D3D11 path for GTA V Legacy is still in the code.
 
 **GTAVR: Legacy:** [`legacy release`](https://github.com/rashwashere/GTAVR/tree/legacy)
+
 **Best with VRCam Enhanced** (camera rat, flashlight, zoom, viewfinder): https://github.com/rashwashere/VRcamPlus/tree/enhanced (downloads: https://github.com/rashwashere/VRcamPlus/releases). GTAVive.asi gives you VR; VRCam adds the camera tools on top. Both mods open their menu with Ctrl+F5 and then share one menu (see Settings menu below); their other default keys do not overlap.
 
 ## What's new since the original
